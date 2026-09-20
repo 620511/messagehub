@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model App {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  apiKeys       ApiKey[]
+  users         User[]
+  conversations Conversation[]
+}
+
+model ApiKey {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  active    Boolean  @default(true)
+  appId     String
+  app       App      @relation(fields: [appId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model User {
+  id            String   @id @default(uuid())
+  appId         String
+  app           App      @relation(fields: [appId], references: [id])
+  externalId    String?
+  email         String?  @unique
+  password      String?
+  name          String
+  role          String   @default("customer")
+  status        String   @default("offline")
+  createdAt     DateTime @default(now())
+
+  memberships       ConversationMember[]
+  messages          Message[]
+  notifications     Notification[]
+  pushSubscriptions PushSubscription[]
+}
+
+model Conversation {
+  id        String   @id @default(uuid())
+  appId     String
+  app       App      @relation(fields: [appId], references: [id])
+  createdAt DateTime @default(now())
+
+  members  ConversationMember[]
+  messages Message[]
+}
+
+model ConversationMember {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  userId         String
+  user           User         @relation(fields: [userId], references: [id])
+  joinedAt       DateTime     @default(now())
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  senderId       String?
+  sender         User?        @relation(fields: [senderId], references: [id])
+  type           String       @default("text")
+  content        String
+  metadata       Json?
+  status         String       @default("sent")
+  createdAt      DateTime     @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  body      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+}
